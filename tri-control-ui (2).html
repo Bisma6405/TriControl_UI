@@ -1,0 +1,606 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TriControl UI</title>
+<style>
+:root{--bg:#0b0f13;--panel:#141a20;--line:#25303a;--fg:#e8edf1;--mute:#8a98a5;--accent:#3ddc97;--danger:#ff6b6b;--btn:#1c242d;
+  --lc:255 214 150;--li:.8;--lx:140px;--ly:140px}
+html[data-theme=light]{--bg:#f2f4f6;--panel:#ffffff;--line:#d6dde3;--fg:#11171c;--mute:#5a6874;--btn:#e9eef2}
+*{box-sizing:border-box}
+html{font-size:16px}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;line-height:1.45;transition:background .25s,color .25s}
+header{position:sticky;top:0;z-index:20;background:var(--panel);border-bottom:1px solid var(--line);padding:.7rem 1rem;display:flex;flex-wrap:wrap;gap:.6rem;align-items:center}
+header h1{font-size:1.1rem;margin:0 .8rem 0 0;letter-spacing:.02em}
+button,select{font:inherit;color:var(--fg);background-color:var(--btn);border:1px solid var(--line);border-radius:8px;padding:.5rem .9rem;cursor:pointer;transition:border-color .15s}
+button:hover{border-color:var(--accent)}
+button:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button.on{background-color:var(--accent);color:#06130d;border-color:var(--accent);font-weight:600}
+.chip{display:inline-flex;align-items:center;gap:.4rem;font-size:.8rem;color:var(--mute);padding:.25rem .6rem;border:1px solid var(--line);border-radius:99px}
+.chip i{width:.55rem;height:.55rem;border-radius:50%;background:var(--mute)}
+.chip.live i{background:var(--accent);box-shadow:0 0 8px var(--accent)}
+.sp{flex:1}
+.gs{font-size:.8rem;color:var(--mute);max-width:34ch}
+label.small{font-size:.8rem;color:var(--mute);display:flex;align-items:center;gap:.4rem}
+main{max-width:1100px;margin:0 auto;padding:1.2rem 1rem 6rem;display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1rem}
+section{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:1rem;min-width:0}
+section h2{font-size:.78rem;text-transform:uppercase;letter-spacing:.09em;color:var(--mute);margin:0 0 .8rem;font-weight:600}
+.row{display:flex;gap:.6rem;flex-wrap:wrap;align-items:center}
+.big{font-size:1.2rem;padding:.9rem 1.2rem;min-width:4.2rem}
+.hint{font-size:.85rem;color:var(--mute);margin:.8rem 0 0;max-width:60ch}
+
+/* gaze dwell progress on any [data-gaze] element */
+[data-gaze]{background-image:linear-gradient(to right,color-mix(in srgb,var(--accent) 45%,transparent) calc(var(--p,0)*1%),transparent 0)}
+[data-gaze].gazing{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 35%,transparent)}
+[data-gaze].fired{animation:fire .45s}
+@keyframes fire{0%{transform:scale(1)}40%{transform:scale(.94)}100%{transform:scale(1)}}
+
+/* ---------- lamp ---------- */
+.lampbox{display:flex;gap:1.6rem;flex-wrap:wrap;align-items:center}
+#lampSvg{flex:none;max-width:100%;overflow:visible}
+.lampctl{flex:1;min-width:260px;display:flex;flex-direction:column;gap:.9rem}
+.lbase,.lpole{fill:var(--line)}
+.larm{stroke:var(--line);stroke-width:7;stroke-linecap:round;fill:none}
+.lshade{fill:var(--line);transition:fill .5s}
+#bulbEl{fill:var(--mute);transition:fill .4s,filter .4s}
+.beam{opacity:0;transition:opacity .6s}
+body.lit .lshade{fill:color-mix(in srgb,rgb(var(--lc)) 28%,var(--line))}
+body.lit #bulbEl{fill:rgb(var(--lc));filter:drop-shadow(0 0 8px rgb(var(--lc))) drop-shadow(0 0 22px rgb(var(--lc)))}
+body.lit .beam{opacity:calc(var(--li))}
+.ls{width:2.6rem;height:2.6rem;border-radius:50%;padding:0;border:3px solid var(--line)}
+.ls.sel{outline:3px solid var(--fg);outline-offset:2px}
+.sw{width:3rem;height:3rem;border-radius:50%;padding:0;border:3px solid var(--line)}
+
+/* page-wide light: dark mode mein bhi andhera rehta hai, bas lamp ke aas-paas roshni phailti hai */
+#light{position:fixed;inset:0;z-index:15;pointer-events:none;opacity:0;transition:opacity .8s ease;mix-blend-mode:screen;
+  background:
+    conic-gradient(from 0deg at var(--lx) var(--ly),transparent 0 150deg,rgb(var(--lc) / calc(.22*var(--li))) 180deg,transparent 210deg 360deg),
+    radial-gradient(circle 55vmax at var(--lx) var(--ly),rgb(var(--lc) / calc(.5*var(--li))) 0,rgb(var(--lc) / calc(.2*var(--li))) 9%,rgb(var(--lc) / calc(.08*var(--li))) 32%,transparent 100%);
+  -webkit-mask-image:radial-gradient(circle 70vmax at var(--lx) var(--ly),#000 0,rgba(0,0,0,.65) 28%,transparent 100%);
+  mask-image:radial-gradient(circle 70vmax at var(--lx) var(--ly),#000 0,rgba(0,0,0,.65) 28%,transparent 100%)}
+body.lit #light{opacity:1;animation:flick .9s ease-out}
+html[data-theme=light] #light{mix-blend-mode:normal}
+html[data-theme=light] body.lit #light{opacity:.4;animation:none}
+@keyframes flick{0%{opacity:0}10%{opacity:.9}18%{opacity:.2}30%{opacity:1}42%{opacity:.65}56%,100%{opacity:1}}
+
+.count{font-size:2.6rem;font-weight:700;min-width:3.2ch;text-align:center;font-variant-numeric:tabular-nums}
+textarea{width:100%;min-height:8rem;resize:vertical;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:.7rem;font:inherit}
+ul.list{margin:0;padding:0;list-style:none;font-size:.88rem}
+ul.list li{padding:.3rem 0;border-bottom:1px dashed var(--line);display:flex;gap:.6rem;justify-content:space-between;flex-wrap:wrap}
+ul.list li b{color:var(--accent);font-weight:600}
+ul.list li b.miss{color:var(--danger)}
+code{background:var(--btn);padding:.05rem .4rem;border-radius:5px;font-size:.85em}
+.help li{display:block}
+.help li span{color:var(--mute)}
+#interim{min-height:1.4rem;color:var(--mute);font-size:.9rem;margin-top:.5rem}
+
+#dot{position:fixed;left:0;top:0;width:22px;height:22px;margin:-11px 0 0 -11px;border-radius:50%;border:2px solid var(--accent);background:color-mix(in srgb,var(--accent) 25%,transparent);pointer-events:none;z-index:100;display:none}
+#scrollbtns{position:fixed;right:12px;top:42%;z-index:30;display:flex;flex-direction:column;gap:.6rem}
+#scrollbtns button{width:3.2rem;height:3.2rem;padding:0;font-size:1.1rem;background-color:var(--panel)}
+#toast{position:fixed;left:50%;bottom:1.2rem;transform:translate(-50%,20px);background:var(--fg);color:var(--bg);padding:.6rem 1rem;border-radius:8px;opacity:0;transition:all .25s;z-index:200;max-width:90vw;pointer-events:none}
+#toast.show{opacity:1;transform:translate(-50%,0)}
+#webgazerVideoContainer{top:auto!important;left:auto!important;right:12px!important;bottom:12px!important;z-index:90!important;border-radius:8px;overflow:hidden;border:1px solid var(--line)}
+
+/* calibration */
+#cal{position:fixed;inset:0;background:rgba(5,8,10,.95);z-index:150;display:none;color:#fff}
+#cal.open{display:block}
+#calMsg{position:absolute;left:50%;top:20%;transform:translate(-50%,-50%);text-align:center;width:min(40ch,40vw);min-width:220px;margin:0;font-size:1rem;pointer-events:none}
+.cp{position:absolute;width:46px;height:46px;margin:-23px 0 0 -23px;border-radius:50%;border:3px solid #ff5c5c;background:rgba(255,92,92,.3);color:#fff;font-weight:700;padding:0;display:grid;place-items:center}
+.cp.hold{animation:shrink 1.8s linear forwards;border-color:#ffd54a;background:rgba(255,213,74,.3)}
+.cp.done{border-color:#3ddc97;background:rgba(61,220,151,.3)}
+.cp.test{border-color:#4aa3ff;background:rgba(74,163,255,.3);pointer-events:none}
+@keyframes shrink{from{transform:scale(1)}to{transform:scale(.3)}}
+#calx{position:absolute;right:1rem;top:1rem}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>TriControl</h1>
+  <button id="btnVoice" data-gaze data-voice="voice mic">🎙 Voice</button>
+  <button id="btnGaze" data-gaze data-voice="gaze eye">👁 Gaze</button>
+  <button id="btnCal" data-gaze data-voice="calibrate">Calibrate</button>
+  <span class="chip" id="chipMouse"><i></i>Mouse</span>
+  <span class="chip" id="chipVoice"><i></i>Voice</span>
+  <span class="chip" id="chipGaze"><i></i>Gaze</span>
+  <span class="gs" id="gstat" aria-live="polite"></span>
+  <span class="sp"></span>
+  <label class="small"><input type="checkbox" id="showDot" checked> Gaze dot</label>
+  <label class="small"><input type="checkbox" id="sim"> Mouse se gaze test</label>
+  <label class="small">Dwell <input type="range" id="dwell" min="600" max="3000" step="100" value="1400"> <span id="dwellV">1.4s</span></label>
+  <select id="lang" aria-label="Voice language">
+    <option value="en-US">English (US)</option>
+    <option value="en-PK">English (Pakistan)</option>
+    <option value="ur-PK">اردو</option>
+  </select>
+</header>
+
+<main>
+  <section style="grid-column:1/-1">
+    <h2>Lamp</h2>
+    <div class="lampbox">
+      <svg id="lampSvg" viewBox="0 0 240 220" width="240" height="220" aria-hidden="true">
+        <defs>
+          <linearGradient id="beamG" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" style="stop-color:rgb(var(--lc));stop-opacity:.6"/>
+            <stop offset=".55" style="stop-color:rgb(var(--lc));stop-opacity:.16"/>
+            <stop offset="1" style="stop-color:rgb(var(--lc));stop-opacity:0"/>
+          </linearGradient>
+        </defs>
+        <polygon class="beam" points="98,86 150,86 232,235 16,235" fill="url(#beamG)"/>
+        <rect class="lbase" x="40" y="204" width="84" height="10" rx="5"/>
+        <rect class="lpole" x="78" y="76" width="8" height="130" rx="3"/>
+        <path class="larm" d="M82 78 L112 46"/>
+        <path class="lshade" d="M96 34 L152 34 L174 82 L74 82 Z"/>
+        <ellipse id="bulbEl" cx="124" cy="84" rx="30" ry="6"/>
+      </svg>
+      <div class="lampctl">
+        <div class="row">
+          <button id="lamp" class="big" data-gaze data-voice="lamp light batti toggle" aria-pressed="false">Lamp: <span id="lampState">OFF</span></button>
+          <button id="dimmer" data-gaze data-voice="dimmer dim">Dim −</button>
+          <button id="brighter" data-gaze data-voice="brighter bright">Bright +</button>
+        </div>
+        <div class="row" id="lampColors" aria-label="Lamp color"></div>
+        <p class="hint">Dark mode mein lamp on karo: theme dark hi rehti hai, lamp ke aas-paas roshni phailti hai. Bolo: <code>lamp red</code>, <code>batti neeli</code>, <code>lamp warm</code>.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Counter</h2>
+    <div class="row">
+      <button id="minus" class="big" data-gaze data-voice="minus">−</button>
+      <div class="count" id="count">0</div>
+      <button id="plus" class="big" data-gaze data-voice="plus">+</button>
+      <button id="reset" data-gaze data-voice="reset counter">Reset</button>
+    </div>
+  </section>
+
+  <section>
+    <h2>Display</h2>
+    <div class="row">
+      <button id="dark" data-gaze data-voice="dark">Dark</button>
+      <button id="light" data-gaze data-voice="light mode">Light</button>
+      <button id="fsDown" data-gaze data-voice="smaller">A−</button>
+      <button id="fsUp" data-gaze data-voice="bigger">A+</button>
+    </div>
+  </section>
+
+  <section>
+    <h2>Accent color</h2>
+    <div class="row">
+      <button class="sw" data-gaze data-voice="accent red laal" data-c="#ff5c6c" style="background-color:#ff5c6c" aria-label="Red"></button>
+      <button class="sw" data-gaze data-voice="accent green hara" data-c="#3ddc97" style="background-color:#3ddc97" aria-label="Green"></button>
+      <button class="sw" data-gaze data-voice="accent blue neela" data-c="#4aa3ff" style="background-color:#4aa3ff" aria-label="Blue"></button>
+      <button class="sw" data-gaze data-voice="accent purple jamni" data-c="#a78bfa" style="background-color:#a78bfa" aria-label="Purple"></button>
+      <button class="sw" data-gaze data-voice="accent orange narangi" data-c="#ff9f43" style="background-color:#ff9f43" aria-label="Orange"></button>
+    </div>
+  </section>
+
+  <section style="grid-column:1/-1">
+    <h2>Notes</h2>
+    <textarea id="notes" placeholder="Yahan type karo, ya 'start typing' bol kar bolo..."></textarea>
+    <div class="row" style="margin-top:.6rem">
+      <button id="btnType" data-gaze data-voice="typing dictation likho">✍ Start typing</button>
+      <button id="btnDelChar" data-gaze data-voice="delete letter backspace harf">⌫ Letter</button>
+      <button id="btnDelWord" data-gaze data-voice="delete word lafz">⌫ Word</button>
+      <button id="btnClear" data-gaze data-voice="clear all notes saaf">Clear all</button>
+    </div>
+    <div id="interim"></div>
+  </section>
+
+  <section>
+    <h2>Voice commands</h2>
+    <ul class="list help">
+      <li><code>dark mode</code> / <code>light mode</code></li>
+      <li><code>light on</code> / <code>light off</code> <span>(batti jalao / band)</span></li>
+      <li><code>lamp red</code> <code>lamp blue</code> <code>lamp warm</code> <span>(laal, neeli, garam)</span></li>
+      <li><code>brighter</code> / <code>dimmer</code></li>
+      <li><code>plus</code> <code>minus</code> <code>reset</code></li>
+      <li><code>bigger</code> / <code>smaller</code> <span>(bara / chota)</span></li>
+      <li><code>scroll down</code> / <code>scroll up</code></li>
+      <li><code>red</code> <code>green</code> <code>blue</code> <code>purple</code> <code>orange</code> <span>(accent)</span></li>
+      <li><code>start typing</code> / <code>stop</code></li>
+      <li><code>backspace</code> <span>(ek letter)</span>, <code>delete word</code> <span>(lafz mitao)</span>, <code>clear</code> <span>(sab saaf)</span></li>
+      <li><code>click lamp</code>, <code>click reset</code> … <span>(kisi button ka naam)</span></li>
+      <li><code>calibrate</code></li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Suna / kiya</h2>
+    <ul class="list" id="log"></ul>
+  </section>
+</main>
+
+<div id="light"></div>
+<div id="scrollbtns">
+  <button id="sUp" data-gaze data-voice="scroll up" aria-label="Scroll up">▲</button>
+  <button id="sDown" data-gaze data-voice="scroll down" aria-label="Scroll down">▼</button>
+</div>
+<div id="dot"></div>
+<div id="toast" role="status"></div>
+<div id="cal"><button id="calx">Close</button><p id="calMsg"></p></div>
+
+<script>
+(()=>{
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const root=document.documentElement;
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const mean=a=>a.reduce((s,v)=>s+v,0)/a.length;
+const med=a=>{const s=[...a].sort((p,q)=>p-q);return s[s.length>>1]};
+let fs=16,count=0,lampLevel=.8;
+
+/* ---------- helpers ---------- */
+function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(toast.h);toast.h=setTimeout(()=>t.classList.remove('show'),3500)}
+function log(heard,did){
+  const li=document.createElement('li'),a=document.createElement('span'),b=document.createElement('b');
+  a.textContent=heard;b.textContent=did?('→ '+did):'→ samajh nahi aaya';if(!did)b.className='miss';
+  li.append(a,b);const ul=$('#log');ul.prepend(li);while(ul.children.length>8)ul.lastChild.remove();
+}
+function chip(id,on){$(id).classList.toggle('live',on)}
+function pulse(el){el.classList.add('fired');setTimeout(()=>el.classList.remove('fired'),450)}
+const gstat=t=>{$('#gstat').textContent=t};
+
+/* ---------- lamp ---------- */
+const has=(p,arr)=>arr.some(w=>p.includes(' '+w+' '));
+const LAMP=['light','lamp','batti','bulb','لائٹ','بتی'];
+const ON=['on','jalao','chalao','roshan','روشن','آن'];
+const OFF=['off','band','bujhao','بند','آف'];
+const LCOLORS=[
+  [['warm','garam','گرم'],'255 214 150'],
+  [['white','safed','سفید'],'255 244 229'],
+  [['cool','thanda','ٹھنڈا'],'190 220 255'],
+  [['yellow','peela','peeli','پیلا','پیلی'],'255 225 74'],
+  [['orange','narangi','نارنجی'],'255 159 67'],
+  [['red','laal','لال'],'255 77 77'],
+  [['pink','gulabi','گلابی'],'255 107 214'],
+  [['purple','jamni','جامنی'],'179 107 255'],
+  [['blue','neela','neeli','نیلا','نیلی'],'74 163 255'],
+  [['green','hara','hari','ہرا','ہری'],'61 255 154']
+];
+const lampColorOf=p=>{for(const [w,c] of LCOLORS)if(has(p,w))return c;return null};
+LCOLORS.forEach(([w,c],i)=>{
+  const b=document.createElement('button');
+  b.className='ls';b.dataset.rgb=c;b.dataset.voice='lamp '+w.join(' ');b.setAttribute('data-gaze','');
+  b.setAttribute('aria-label','Lamp '+w[0]);b.style.backgroundColor='rgb('+c.replace(/ /g,',')+')';
+  b.onclick=()=>{setLampColor(c);setLamp(true)};
+  if(i===0)b.classList.add('sel');
+  $('#lampColors').appendChild(b);
+});
+function placeLight(){
+  const r=$('#bulbEl').getBoundingClientRect();
+  root.style.setProperty('--lx',(r.left+r.width/2)+'px');
+  root.style.setProperty('--ly',(r.top+r.height/2)+'px');
+}
+let raf=0;
+const queuePlace=()=>{if(!raf)raf=requestAnimationFrame(()=>{raf=0;placeLight()})};
+addEventListener('scroll',queuePlace,{passive:true});
+addEventListener('resize',queuePlace);
+function setLamp(on){
+  $('#lamp').setAttribute('aria-pressed',on);$('#lampState').textContent=on?'ON':'OFF';
+  placeLight();document.body.classList.toggle('lit',on);
+}
+function setLampColor(rgb){
+  root.style.setProperty('--lc',rgb);
+  $$('.ls').forEach(b=>b.classList.toggle('sel',b.dataset.rgb===rgb));
+}
+function setLevel(d){lampLevel=clamp(+(lampLevel+d).toFixed(2),.25,1.3);root.style.setProperty('--li',lampLevel)}
+
+/* ---------- other actions ---------- */
+function setCount(n){count=n;$('#count').textContent=n}
+function setTheme(t){root.setAttribute('data-theme',t);queuePlace()}
+function setFs(d){fs=clamp(fs+d,12,28);root.style.fontSize=fs+'px';queuePlace()}
+function setAccent(c){root.style.setProperty('--accent',c)}
+let dictating=false;
+function setTyping(on){dictating=on;const b=$('#btnType');b.textContent=on?'■ Stop typing':'✍ Start typing';b.classList.toggle('on',on);if(on)$('#notes').focus()}
+const notes=$('#notes');
+const delChar=()=>{notes.value=notes.value.slice(0,-1)};
+const delWord=()=>{notes.value=notes.value.replace(/\s*\S+\s*$/,'')};
+const clearAll=()=>{notes.value=''};
+
+$('#lamp').onclick=()=>setLamp($('#lamp').getAttribute('aria-pressed')!=='true');
+$('#dimmer').onclick=()=>setLevel(-.15);
+$('#brighter').onclick=()=>setLevel(.15);
+$('#plus').onclick=()=>setCount(count+1);
+$('#minus').onclick=()=>setCount(count-1);
+$('#reset').onclick=()=>setCount(0);
+$('#dark').onclick=()=>setTheme('dark');
+$('#light').onclick=()=>setTheme('light');
+$('#fsUp').onclick=()=>setFs(2);
+$('#fsDown').onclick=()=>setFs(-2);
+$$('.sw').forEach(b=>b.onclick=()=>setAccent(b.dataset.c));
+$('#btnType').onclick=()=>setTyping(!dictating);
+$('#btnDelChar').onclick=delChar;
+$('#btnDelWord').onclick=delWord;
+$('#btnClear').onclick=clearAll;
+$('#sUp').onclick=()=>scrollBy({top:-innerHeight*.6,behavior:'smooth'});
+$('#sDown').onclick=()=>scrollBy({top:innerHeight*.6,behavior:'smooth'});
+$('#btnVoice').onclick=()=>voiceOn?stopVoice():startVoice();
+$('#btnGaze').onclick=()=>gazeOn?stopGaze():startGaze();
+$('#btnCal').onclick=()=>openCal();
+$('#dwell').oninput=e=>{$('#dwellV').textContent=(e.target.value/1000).toFixed(1)+'s'};
+$('#lang').onchange=()=>{if(voiceOn){stopVoice();setTimeout(startVoice,300)}};
+$('#showDot').onchange=e=>{dot.style.opacity=e.target.checked?1:0};
+document.addEventListener('mousemove',()=>chip('#chipMouse',true),{once:true});
+chip('#chipMouse',true);
+
+/* ---------- voice commands ---------- */
+const COLORS=[
+  [['red','laal','لال'],'#ff5c6c'],[['green','hara','ہرا'],'#3ddc97'],[['blue','neela','نیلا'],'#4aa3ff'],
+  [['purple','jamni','جامنی'],'#a78bfa'],[['orange','narangi','نارنجی'],'#ff9f43']
+];
+const NOTE_CMDS=[
+  {n:'Typing OFF',t:p=>has(p,['stop typing','stop','ruko','رکو','بس']),r:()=>setTyping(false)},
+  {n:'Delete word',t:p=>has(p,['delete word','remove word','undo word','delete last word','remove last word','lafz mitao','pichla lafz','لفظ مٹاؤ']),r:delWord},
+  {n:'Delete letter',t:p=>has(p,['backspace','back space','delete letter','delete character','delete char','remove letter','remove last letter','harf mitao','حرف مٹاؤ']),r:delChar},
+  {n:'Clear all notes',t:p=>has(p,['clear','clear all','clear notes','clear everything','saaf','sab saaf','صاف','سب صاف']),r:clearAll}
+];
+const cmds=[
+  {n:'Lamp color',t:p=>has(p,LAMP)&&!!lampColorOf(p),r:p=>{setLampColor(lampColorOf(p));setLamp(true)}},
+  {n:'Lamp brighter',t:p=>has(p,['brighter','bright','tez','تیز']),r:()=>setLevel(.15)},
+  {n:'Lamp dimmer',t:p=>has(p,['dimmer','dim','halka','ہلکا']),r:()=>setLevel(-.15)},
+  {n:'Dark mode',t:p=>has(p,['dark','andhera','ڈارک','اندھیرا']),r:()=>setTheme('dark')},
+  {n:'Light mode',t:p=>p.includes(' light mode ')||has(p,['white mode','day mode','safed','سفید','روشنی']),r:()=>setTheme('light')},
+  {n:'Lamp ON',t:p=>has(p,LAMP)&&has(p,ON),r:()=>setLamp(true)},
+  {n:'Lamp OFF',t:p=>has(p,LAMP)&&has(p,OFF),r:()=>setLamp(false)},
+  {n:'Calibrate',t:p=>has(p,['calibrate','calibration','کیلیبریٹ']),r:()=>openCal()},
+  ...NOTE_CMDS,
+  {n:'Typing ON',t:p=>has(p,['start typing','typing','dictate','likho','likhna','لکھو','لکھنا']),r:()=>setTyping(true)},
+  {n:'Counter reset',t:p=>has(p,['reset','zero','sifar','صفر']),r:()=>setCount(0)},
+  {n:'Counter +1',t:p=>has(p,['plus','add','increase','barhao','zyada','بڑھاؤ','اضافہ']),r:()=>setCount(count+1)},
+  {n:'Counter −1',t:p=>has(p,['minus','decrease','subtract','kam','کم']),r:()=>setCount(count-1)},
+  {n:'Bigger text',t:p=>has(p,['bigger','larger','zoom in','bara','bada','بڑا','بڑے']),r:()=>setFs(2)},
+  {n:'Smaller text',t:p=>has(p,['smaller','zoom out','chota','choti','چھوٹا','چھوٹے']),r:()=>setFs(-2)},
+  {n:'Scroll down',t:p=>has(p,['scroll down','down','neeche','نیچے']),r:()=>scrollBy({top:innerHeight*.7,behavior:'smooth'})},
+  {n:'Scroll up',t:p=>has(p,['scroll up','up','upar','اوپر']),r:()=>scrollBy({top:-innerHeight*.7,behavior:'smooth'})},
+  ...COLORS.map(([w,c])=>({n:'Accent '+w[0],t:p=>has(p,w),r:()=>setAccent(c)}))
+];
+function clickByLabel(target){
+  target=target.trim();if(!target)return null;
+  for(const el of $$('[data-gaze]')){
+    const label=((el.dataset.voice||'')+' '+el.textContent).toLowerCase();
+    if(target.split(' ').every(w=>label.includes(w))){el.click();pulse(el);return el}
+  }
+  return null;
+}
+function handleVoice(raw){
+  const text=raw.trim();if(!text)return;
+  const p=' '+text.toLowerCase().replace(/[.,!?؟،۔]/g,' ').replace(/\s+/g,' ').trim()+' ';
+  if(dictating){
+    // chhota jumla ho aur edit command ho to chalao, warna notes mein likho
+    if(text.split(/\s+/).length<=4){
+      for(const c of NOTE_CMDS){if(c.t(p)){c.r(p);log(text,c.n);return}}
+    }
+    notes.value+=(notes.value&&!/\s$/.test(notes.value)?' ':'')+text;
+    log(text,'notes mein likha');return;
+  }
+  const m=p.trim().match(/^(click|press|tap|dabao|dabana|open|کلک|دباؤ)\s+(.+)$/);
+  if(m){const el=clickByLabel(m[2]);log(text,el?('click: '+m[2]):null);return}
+  for(const c of cmds){if(c.t(p)){c.r(p);log(text,c.n);return}}
+  log(text,null);
+}
+
+/* ---------- speech recognition ---------- */
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+let rec=null,voiceOn=false;
+function startVoice(){
+  if(!SR){toast('Voice recognition sirf Chrome ya Edge mein chalta hai.');return}
+  rec=new SR();rec.continuous=true;rec.interimResults=true;rec.lang=$('#lang').value;
+  rec.onresult=e=>{
+    for(let i=e.resultIndex;i<e.results.length;i++){
+      const r=e.results[i],t=r[0].transcript;
+      if(r.isFinal){$('#interim').textContent='';handleVoice(t)}else{$('#interim').textContent='… '+t}
+    }
+  };
+  rec.onerror=e=>{
+    if(e.error==='not-allowed'||e.error==='service-not-allowed'){voiceOn=false;sync();toast('Mic permission band hai. Browser mein allow karo.')}
+  };
+  rec.onend=()=>{if(voiceOn){try{rec.start()}catch(_){}}else sync()};
+  try{rec.start();voiceOn=true;sync();toast('Voice on. Bolo: "lamp red"')}catch(err){toast('Voice start nahi hui: '+err.message)}
+}
+function stopVoice(){voiceOn=false;try{rec&&rec.stop()}catch(_){}sync()}
+function sync(){
+  $('#btnVoice').classList.toggle('on',voiceOn);chip('#chipVoice',voiceOn);
+  $('#btnGaze').classList.toggle('on',gazeOn);chip('#chipGaze',gazeOn||simOn());
+}
+
+/* ---------- gaze ---------- */
+let gazeOn=false,gx=innerWidth/2,gy=innerHeight/2,cur=null,since=0,lockUntil=0;
+let biasX=0,biasY=0,tol=45;
+const dot=$('#dot');
+const simOn=()=>$('#sim').checked;
+const gazeEls=$$('[data-gaze]');
+
+function loadScript(src){return new Promise((ok,no)=>{const s=document.createElement('script');s.src=src;s.onload=ok;s.onerror=()=>no(new Error('script load failed'));document.head.appendChild(s)})}
+
+/* WebGazer 3.x ka face model path relative hota hai, isliye CDN par point karna zaroori hai */
+const WG_SOURCES=[
+  {js:'https://cdn.jsdelivr.net/npm/webgazer@3.5.3/dist/webgazer.js',path:'https://cdn.jsdelivr.net/npm/webgazer@3.5.3/dist/mediapipe/face_mesh'},
+  {js:'https://unpkg.com/webgazer@3.5.3/dist/webgazer.js',path:'https://unpkg.com/webgazer@3.5.3/dist/mediapipe/face_mesh'}
+];
+let gazeCount=0,lastGaze=0,gazeStart=0,gazeTimer=null;
+async function pickSource(){
+  for(const s of WG_SOURCES){
+    try{
+      gstat('Model check ho raha hai…');
+      const r=await fetch(s.path+'/face_mesh.binarypb');
+      if(!r.ok)throw new Error('model HTTP '+r.status);
+      if(!window.webgazer)await loadScript(s.js);
+      return s;
+    }catch(e){console.warn('WebGazer source fail:',s.js,e)}
+  }
+  throw new Error('Na jsdelivr chala na unpkg. Internet ya firewall check karo.');
+}
+function watchGaze(){
+  clearInterval(gazeTimer);
+  gazeTimer=setInterval(()=>{
+    if(!gazeOn){clearInterval(gazeTimer);return}
+    const now=performance.now();
+    if(gazeCount===0)gstat(now-gazeStart>40000?'Model load nahi hua. F12 → Console dekho.':'Model load ho raha hai (pehli baar 10-30 sec)…');
+    else if(now-lastGaze>2500)gstat('Face nahi dikh raha. Roshni chehre par rakho, camera ke saamne aao.');
+    else gstat('Gaze chal raha hai ✓');
+  },1000);
+}
+async function startGaze(){
+  if(gazeOn)return;
+  try{
+    if(location.protocol==='file:')toast('File seedha khol rahi ho. localhost se kholna behtar hai.');
+    const src=await pickSource();
+    webgazer.params.faceMeshSolutionPath=src.path;
+    webgazer.params.showGazeDot=false;
+    webgazer.params.saveDataAcrossSessions=false;
+    gstat('Camera allow karo…');
+    webgazer.setRegression('ridge').setGazeListener(d=>{
+      if(!d)return;
+      gazeCount++;lastGaze=performance.now();
+      if(!simOn())onGaze(d.x,d.y);
+    });
+    await webgazer.begin();
+    /* WebGazer har click aur mouse-move par train hota hai. Hamare dwell/voice ke
+       programmatic click() (0,0) par train kar ke model bigaad dete the. Isliye band. */
+    const noMouseTrain=()=>{try{webgazer.removeMouseEventListeners()}catch(_){}};
+    noMouseTrain();setTimeout(noMouseTrain,1500);setTimeout(noMouseTrain,4000);
+    webgazer.applyKalmanFilter(true);
+    webgazer.showVideoPreview(true).showPredictionPoints(false).showFaceOverlay(true).showFaceFeedbackBox(true);
+    gazeOn=true;gazeCount=0;lastGaze=0;gazeStart=performance.now();
+    sync();dot.style.display='block';watchGaze();openCal();
+  }catch(err){
+    gazeOn=false;sync();
+    const denied=err&&(err.name==='NotAllowedError'||err.name==='SecurityError');
+    const nocam=err&&err.name==='NotFoundError';
+    gstat(denied?'Camera permission block hai.':nocam?'Camera nahi mila.':'Gaze start nahi hui: '+(err&&err.message||err));
+    toast(denied?'Camera permission allow karo (address bar mein camera icon).':nocam?'Koi camera detect nahi hua.':'Gaze start nahi hui. Console (F12) dekho.');
+    console.error(err);
+  }
+}
+function stopGaze(){
+  gazeOn=false;clearInterval(gazeTimer);gstat('');
+  try{window.webgazer&&webgazer.end()}catch(_){}
+  if(!simOn())dot.style.display='none';clearCur();sync();
+}
+$('#sim').onchange=()=>{dot.style.display=(simOn()||gazeOn)?'block':'none';sync();if(simOn())toast('Mouse ab "aankh" hai. Kisi button par ruko.')};
+document.addEventListener('mousemove',e=>{if(simOn())onGaze(e.clientX,e.clientY,true)});
+/* asli mouse click button par ho to wo bhi sahi training sample hai (programmatic click nahi) */
+document.addEventListener('click',e=>{
+  if(!gazeOn||!e.isTrusted||$('#cal').classList.contains('open')||!window.webgazer)return;
+  const t=e.target.closest&&e.target.closest('[data-gaze]');
+  if(t){const r=t.getBoundingClientRect();webgazer.recordScreenPosition(r.left+r.width/2,r.top+r.height/2,'click')}
+});
+
+function clearCur(){if(cur){cur.classList.remove('gazing');cur.style.removeProperty('--p')}cur=null}
+function distTo(el,x,y){
+  const r=el.getBoundingClientRect();if(r.width===0)return 1e9;
+  return Math.hypot(Math.max(r.left-x,0,x-r.right),Math.max(r.top-y,0,y-r.bottom));
+}
+function targetAt(x,y){
+  let best=null,bd=1e9;
+  for(const el of gazeEls){const d=distTo(el,x,y);if(d<bd){bd=d;best=el}}
+  return bd<=tol?best:null;
+}
+
+/* smoothing: median (outlier hatao) + deadzone + adaptive EMA */
+const buf=[];let fx=innerWidth/2,fy=innerHeight/2,haveF=false,valSink=null;
+const DEAD=16;
+function onGaze(rx,ry,raw){
+  if(valSink&&!raw)valSink.push({x:rx,y:ry});
+  if(raw){fx=rx;fy=ry;haveF=true}
+  else{
+    rx+=biasX;ry+=biasY;
+    buf.push([rx,ry]);if(buf.length>9)buf.shift();
+    const mx=med(buf.map(p=>p[0])),my=med(buf.map(p=>p[1]));
+    if(!haveF){fx=mx;fy=my;haveF=true}
+    const d=Math.hypot(mx-fx,my-fy);
+    if(d>DEAD){const a=Math.min(.35,.07+d/1000);fx+=(mx-fx)*a;fy+=(my-fy)*a}
+  }
+  gx=clamp(fx,0,innerWidth);gy=clamp(fy,0,innerHeight);
+  dot.style.transform='translate('+gx+'px,'+gy+'px)';
+  if($('#cal').classList.contains('open')){clearCur();return}
+
+  const now=performance.now();
+  // hysteresis: purana target thoda door tak pakda rahe, warna jitter se progress reset hota hai
+  let el=cur&&distTo(cur,gx,gy)<=tol*1.4?cur:targetAt(gx,gy);
+  if(el!==cur){clearCur();cur=el;since=now;if(cur)cur.classList.add('gazing')}
+  if(cur&&now>lockUntil){
+    const p=Math.min(1,(now-since)/(+$('#dwell').value));
+    cur.style.setProperty('--p',p*100);
+    if(p>=1){
+      const t=cur;t.click();pulse(t);
+      log('gaze dwell',(t.dataset.voice?t.dataset.voice.split(' ')[0]:t.textContent.trim()));
+      lockUntil=now+900;since=now+900;t.style.setProperty('--p',0);
+    }
+  }
+}
+
+/* ---------- calibration + accuracy check ---------- */
+const cal=$('#cal');
+const CAL_PTS=[[10,12],[50,12],[90,12],[10,50],[50,50],[90,50],[10,88],[50,88],[90,88],[30,30],[70,30],[30,70],[70,70]];
+let calIdx=0,calBusy=false,calToken=0;
+function mkPoint(x,y,label){
+  const b=document.createElement('button');b.className='cp';b.style.left=x+'%';b.style.top=y+'%';b.textContent=label;
+  cal.appendChild(b);return b;
+}
+function centerOf(b){const r=b.getBoundingClientRect();return [r.left+r.width/2,r.top+r.height/2]}
+function openCal(){
+  if(!gazeOn&&!simOn()){toast('Pehle Gaze on karo.');return}
+  try{window.webgazer&&gazeOn&&webgazer.clearData()}catch(_){}
+  buf.length=0;biasX=0;biasY=0;calIdx=0;calBusy=false;calToken++;
+  cal.classList.add('open');showCalPoint(calToken);
+}
+function showCalPoint(tok){
+  $$('.cp').forEach(e=>e.remove());
+  if(tok!==calToken)return;
+  if(calIdx>=CAL_PTS.length){startValidation(tok);return}
+  const [x,y]=CAL_PTS[calIdx];
+  $('#calMsg').textContent='Point '+(calIdx+1)+'/'+CAL_PTS.length+'. Sar seedha rakho. Dot ko dekho, click karo, phir 2 second nazar mat hatao.';
+  const b=mkPoint(x,y,calIdx+1);
+  b.onclick=()=>{
+    if(calBusy)return;calBusy=true;b.classList.add('hold');
+    const [cx,cy]=centerOf(b);let n=0;
+    const iv=setInterval(()=>{
+      if(tok!==calToken){clearInterval(iv);return}
+      if(window.webgazer&&gazeOn)webgazer.recordScreenPosition(cx,cy,'click');
+      if(++n>=32){clearInterval(iv);b.classList.remove('hold');b.classList.add('done');b.textContent='✓';
+        setTimeout(()=>{calBusy=false;calIdx++;showCalPoint(tok)},150)}
+    },55);
+  };
+}
+function startValidation(tok){
+  $('#calMsg').textContent='Ab accuracy check. Click nahi karna, bas dots ko dekhte raho.';
+  const pts=[[25,28],[75,28],[25,72],[75,72],[50,50]],res=[];let i=0;
+  buf.length=0;
+  const next=()=>{
+    $$('.cp').forEach(e=>e.remove());
+    if(tok!==calToken)return;
+    if(i>=pts.length){finishCal(res);return}
+    const b=mkPoint(pts[i][0],pts[i][1],'');b.classList.add('test');
+    const [tx,ty]=centerOf(b);
+    setTimeout(()=>{valSink=[]},900);
+    setTimeout(()=>{
+      const s=valSink||[];valSink=null;
+      if(s.length>=4)res.push({dx:tx-med(s.map(p=>p.x)),dy:ty-med(s.map(p=>p.y))});
+      i++;next();
+    },2200);
+  };
+  next();
+}
+function finishCal(res){
+  cal.classList.remove('open');valSink=null;
+  if(!res.length){gstat('Face nahi mila. Dobara calibrate karo.');toast('Calibration check fail: face detect nahi hua. Roshni theek karo aur dobara Calibrate dabao.');return}
+  const bx=mean(res.map(r=>r.dx)),by=mean(res.map(r=>r.dy));
+  if(Math.hypot(bx,by)<300){biasX=bx;biasY=by}
+  const err=mean(res.map(r=>Math.hypot(r.dx-biasX,r.dy-biasY)));
+  tol=clamp(err*.7,40,110);
+  buf.length=0;
+  toast('Accuracy ≈ '+Math.round(err)+' px.'+(err>200?' Kam hai: seedha baitho, roshni chehre par rakho, phir Calibrate dobara karo.':' Ab kisi button ko dekho.'));
+}
+$('#calx').onclick=()=>{calToken++;valSink=null;cal.classList.remove('open')};
+
+queuePlace();placeLight();
+sync();
+})();
+</script>
+</body>
+</html>
